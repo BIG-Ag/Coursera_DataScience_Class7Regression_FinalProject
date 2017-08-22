@@ -1,0 +1,193 @@
+---
+title: "Analysis of different MPG between automatic and amnual transmission"
+author: "Charles"
+date: "August 21, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Executive Summary
+This analysis focuses on the differences of MPG between automatic and manual transmissions.
+The paper firstly set environment, load data and do a exploratory data analysis to see that there is a difference of MPG.
+Then try to fit a simple linear model that only use 'am' as regressor.
+The result shows that there's a obvious difference of MPG between two groups,
+but the model does not fit very well.
+Later on the paper selects two more regressors ('wt' and 'sqec') according to
+the correlation and fit a new multi-variable linear model.
+The result shows the same that manul transmission has a better MPG than automatic and
+the model fits pretty good.
+In the end, the paper did residual analysis.
+
+## Exploratory Data Analysis
+
+Firstly set working environment and load data:
+
+```{r set environment, results=FALSE, message=FALSE, warning=FALSE}
+setwd("C:/Study/Coursera/1 Data-Science/2 RStudio/7 Class 7/Coursera_DataScience_Class7Regression_FinalProject")
+library(UsingR)
+library(ggplot2)
+library(dplyr)
+library(grid)
+library(gridExtra)
+data(mtcars)
+```
+
+Then have a brief idea about data:
+
+```{r brief look}
+head(mtcars)
+```
+
+In order to see the difference mpg between different transmissions, draw a boxplot:
+
+```{r boxplot}
+g <- ggplot(mtcars, aes(x=factor(am), y=mpg, fill = factor(am))) +
+        geom_boxplot() +
+        xlab('Transmission (0=automatic, 1=manual)') +
+        ylab('Miles Per Gallon (MPG)')
+g
+```
+
+The x-axis is the transmission. 0 stands for automatic and 1 stands for manual.
+The y-axis is Miles Per Gallon (MPG).
+As we can see above, it's quite obvious that there is a difference between different transmissions.
+
+## Fit a simple linear model
+
+In order to figure out the relationship between MPG and Transmissions, the most straight forward way is to get a simple linear regression between these two and have a
+look at the coefficients and $R^2$.
+
+```{r simple regression}
+fitAm <- lm(mpg ~ am, data = mtcars)
+summary(fitAm)$coef
+summary(fitAm)$adj.r.squared
+```
+
+The intercept coefficent stands for the MPG of automatic cars (regressor=0).
+The am coefficient stands for MPG increase for unit increase of manual cars.
+$R^2$ is small so this linear model does not fit quite well.
+Try to get a confidence interval:
+
+```{r inference 1}
+alpha <- 0.05
+n <- length(mtcars)
+pe <- coef(summary(fitAm))["am", "Estimate"]
+se <- coef(summary(fitAm))["am", "Std. Error"]
+tvalue <- qt(1 - alpha/2, n - 2)
+pe + c(-1, 1) * (se * tvalue)
+```
+
+We can see above the confidence interval doesn't include 0.
+So we can reject the null hypothesis in favor of the alternative one that
+there is a significant difference of MPG between two groups of transmissions at alpha=0.5.
+
+## Fit a complex linear model
+
+We could select a multi-variable linear model. 
+Firstly fit a linear model for all variables:
+
+```{r fitall}
+fitAll <- lm(mpg ~ ., data = mtcars)
+summary(fitAll)$coef
+```
+
+Then calculate the correlation:
+
+```{r correlation}
+corCars <- cor(mtcars)
+data.frame(Cor.mpg = corCars[,which(names(mtcars)=='mpg')], Cor.wt = corCars[,which(names(mtcars)=='wt')])
+```
+
+The selection of regressors follow the rules:
+
+- Select the variable most correlated to MPG. In this case is 'wt'.
+- Select the variable that is least correlated to 'wt'. In this case is 'qsec'.
+- Add the selected variables together.
+
+So we get our regressors: 'wt', 'qsec', 'am'.
+Then fit the multi-variable linear regression model with selected variables:
+
+```{r fit new}
+fitNew <- lm(mpg ~ am + qsec + wt, data = mtcars)
+summary(fitNew)$coef
+summary(fitNew)$adj.r.squared
+```
+
+As we can see above, the linear model fits quite well.
+Use nested model to test:
+
+```{r nest test}
+fit1 <- lm(mpg ~ wt, data = mtcars)
+fit2 <- update(fit1, mpg ~ wt + qsec)
+fit3 <- update(fit1, mpg ~ wt + qsec + am)
+anova(fit1,fit2,fit3)
+```
+
+As we can see above, all the variables are significant important.
+Calculate confidence interval again:
+
+```{r CI again}
+pe <- coef(summary(fitNew))["am", "Estimate"]
+se <- coef(summary(fitNew))["am", "Std. Error"]
+tvalue <- qt(1 - alpha/2, n - 2)
+pe + c(-1, 1) * (se * tvalue)
+```
+
+So the CI still don't contain 0, which means our previous conclusion holds.
+Then we could do residual analysis:
+
+```{r diagnostic}
+par(mfrow = c(2,2))
+plot(fitNew)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
